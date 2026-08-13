@@ -1,7 +1,7 @@
 # Document Processor Orchestration — Feasibility Analysis
 
 > **Date:** 2026-08-12
-> **Status:** Draft v0.2 — decisions accepted, Hosting pending
+> **Status:** Draft v0.3 — decisions accepted, Hosting + cost governance resolved
 > **Audience:** HITL (human-in-the-loop) + SDD agents
 > **Scope:** Orchestrating a web service + web app + mobile app around the document/invoice processing domain
 > **Source material:** `../document-processor` (mature Python/FastAPI service), `../ICES` (SDD specs)
@@ -88,7 +88,7 @@ merging of two codebases — it is unifying their *contracts and process* so one
 
 | Component | In scope (v1) | Out of scope (deferred) |
 |-----------|---------------|-------------------------|
-| Web service | Ingestion, status, list, image download, health, rate-limit, auth, worker, storage lifecycle | Multi-tenant billing, webhooks, event stream |
+| Web service | Ingestion, status, list, image download, health, rate-limit + daily doc quota + kill-switch, auth, worker, storage lifecycle | Multi-tenant billing, webhooks, event stream |
 | Web app | Document list/search, detail + parsed data review, validation queue (manual fix flag), API key admin, dashboard | Report builder, user management/RBAC UI, PDF liquidacion export |
 | Mobile app | Camera capture, quality validation, offline queue (FIFO + exponential backoff), status polling | WebSocket push, on-device OCR (WASM) |
 
@@ -241,8 +241,10 @@ native camera + offline, at the cost of language divergence).
 
 | Concern | Choice | Notes |
 |---------|--------|-------|
-| Database | PostgreSQL 16 | shared by web service only (apps never touch DB) |
-| Object storage | MinIO (S3-compatible) | content-addressed SHA-256 keys |
+| Hosting | Self-host VPS (docker-compose), 4 vCPU / 8 GB | provider-agnostic; Hetzner CX42 suggested — see D11 |
+| Edge / TLS | Cloudflare free + Caddy (auto-TLS) | hides origin, DDoS/edge rate-limit — see D12 |
+| Database | PostgreSQL 16 (docker) | shared by web service only (apps never touch DB); migration path to managed |
+| Object storage | MinIO (S3-compatible, self-hosted) | content-addressed SHA-256 keys; presigned URLs only; migration path to R2 |
 | Queue | PostgreSQL `SKIP LOCKED` | upgrade path to Redis/AMQP documented (ADR-001) |
 | Containers | Docker + compose | service only; web/mobile build separately |
 | Package mgmt (BE) | uv | existing |
@@ -392,53 +394,65 @@ This is decision **D10** (§12).
 | Web↔mobile code reuse over-promised | Medium | Define a shared UI package boundary early; accept partial reuse |
 | Three-language cognitive load | Medium | Confine Python to the service; keep web+mobile TS-idiomatic |
 | ICES Textract/BullMQ divergence | Low (already rejected) | Retain PaddleOCR/EasyOCR + PG queue; Textract as optional adapter only |
+| Public abuse → cost runaway (public repos, paid infra) | High | D12: auth-gated OCR, 100 docs/day cap + per-key quotas, Cloudflare edge, storage lifecycle, kill-switch alerts |
 | Scope creep (reports/RBAC/WS) | Medium | v1 scope locked in §3.2; defer list explicit |
 
 ---
 
 ## 11. Open Questions
 
-### 11.1 Hosting — open (pros/cons below, pending decision)
+### 11.1 Hosting — resolved (D11)
 
-Two postures remain viable; neither is locked until the Spec phase. The deciding
-variables are **ops budget**, **Argentine data-residency/compliance control**, and
-**egress cost** (image downloads dominate traffic).
+**Decision: self-host VPS (docker-compose) as the v1 default**, with managed services
+documented as the scale/migration path. Rationale: minimize cost (flat VPS beats
+usage-based managed at 100–1000 docs/day), no Argentine data-residency block, and
+100–1000 docs/day is comfortably handled by a single 4 vCPU / 8 GB machine.
 
-| Dimension | A. Hybrid-managed | B. Self-host (VPS) |
-|-----------|-------------------|--------------------|
-| API service | Render / Fly.io small instance | Docker on a VPS (Hetzner/OVH) |
-| OCR worker | Fly.io machine 2–4 GB always-on | Same worker image on the VPS |
-| PostgreSQL | Managed (Render/Neon) w/ PITR | Self-managed (docker-compose, WAL backups) |
-| Object storage | Cloudflare R2 (S3-compat, zero egress) | MinIO (S3-compat) on the VPS |
-| Web app | Cloudflare Pages / Vercel (static SPA) | Nginx + static build |
-| Ops burden | **Low** | High (updates, patching, backups, monitoring) |
-| Cost predictability | Usage-based (egress-friendly via R2) | Flat monthly, but egress billed by VPS provider |
-| Compliance / data residency | Varies per vendor; AR residency needs review | **Full control** (self-host in-region) |
-| Open-source alignment | Commodity managed services (portable) | **Maximum** — everything self-run |
-| Lock-in | Low (Postgres + S3-compat are portable) | None |
-| Scaling path | Easy on managed platforms | Manual (bigger VPS / extra nodes) |
-| **Best fit** | Getting to v1 fast with a small team | Long-term self-reliance / strict data control |
+Reference topology (provider-agnostic; Hetzner CX42 suggested):
 
-**Notes:**
+| Layer | Choice |
+|-------|--------|
+| Edge | Cloudflare free (hides origin, DDoS/edge rate-limit) |
+| VPS | 4 vCPU / 8 GB (provider-agnostic; Hetzner CX42 suggested) |
+| Reverse proxy | Caddy (auto-TLS) |
+| API + worker | FastAPI + worker containers (docker-compose) |
+| PostgreSQL | docker + WAL/nightly `pg_dump`; offsite via rclone |
+| Object storage | MinIO (S3-compat); presigned URLs only; offsite backup to B2/R2 |
+| Monitoring | compose healthchecks + Uptime Kuma |
 
-- The **OCR worker** is the decisive constraint in either posture: PaddleOCR is
-  CPU/RAM-heavy, so serverless/function hosting is unsuitable — it needs an always-on
-  machine (Fly.io or a VPS).
-- Both postures keep **PostgreSQL + S3-compatible storage**, so switching later is a
-  config change, not a migration — honoring the open-source/portability mandate.
-- GPU acceleration for OCR is a later, optional path (worker only), not v1.
+**Scalability / migration ladder:**
 
-### 11.2 Remaining open questions
+1. **Vertical** → 16 GB VPS (first move).
+2. **Horizontal** → split the OCR worker onto its own host; PG/MinIO stay.
+3. **GPU** → dedicated worker node only if OCR latency becomes a constraint (optional).
+4. **Managed escape hatch** → MinIO→Cloudflare R2, self-Postgres→Neon/Render,
+   worker→Fly.io — drop-in because S3-compat + Postgres are standard, honoring the
+   open-source/portability mandate.
 
-1. **Hosting** — see §11.1. Still open; decision deferred to the Spec phase.
-2. **Manual review workflow** — is human-in-the-loop review (confirm/edit extracted
+### 11.2 Cost & abuse guardrails — resolved (D12)
+
+Public repos (portfolio) + a paid, non-free-tier environment require explicit guardrails
+so a public API cannot burn budget. OCR/upload is auth-gated; cost is bounded by quotas.
+
+| Guardrail | Mechanism |
+|-----------|-----------|
+| Auth-gated ingestion | OCR/upload requires JWT or API key (D9) — no anonymous OCR |
+| Edge protection | Cloudflare free in front of the VPS |
+| Rate limiting | per-key/IP limits on `/ingest` and image download |
+| Daily document cap | 100 docs/day global cap + per-key quota, enforced by the worker before dequeuing |
+| Storage lifecycle | retention/archive; presigned URLs only (no public bucket) |
+| Budget kill-switch | spend alerts on offsite backup (B2/R2); queue halts above the daily cap |
+| Secrets hygiene | `.env` gitignored + `.env.example`; secrets via env/CI; no creds in docs or conversations |
+
+### 11.3 Remaining open questions
+
+1. **Manual review workflow** — is human-in-the-loop review (confirm/edit extracted
    fields) a v1 feature? ICES implied it; document-processor has no review endpoint yet.
-3. **License** — open-source mandate says "TBD in Spec phase" — pick (e.g., AGPL-3.0 vs
+2. **License** — open-source mandate says "TBD in Spec phase" — pick (e.g., AGPL-3.0 vs
    MIT) before public release.
-4. **On-device OCR (WASM)** — explicitly deferred; revisit as a mobile quality trigger.
+3. **On-device OCR (WASM)** — explicitly deferred; revisit as a mobile quality trigger.
 
-**Resolved:** Auth model — see D9 (§12). JWT + roles for human users (web + mobile);
-API keys retained for machine clients.
+**Resolved:** Auth (D9), Hosting (D11), and cost & abuse guardrails (D12).
 
 ---
 
@@ -456,21 +470,22 @@ API keys retained for machine clients.
 | D8 | Merge ICES audit-trail + failed-extraction ideas into schema | Accepted |
 | D9 | Authentication: JWT (web + mobile) with rotating refresh tokens, roles `ADMIN`/`REVIEWER`, RBAC middleware; API keys retained for machine clients | Accepted |
 | D10 | Conversation persistence: every Validation stage / HITL gate persists the session to `docs/conversations/` before passing | Accepted |
+| D11 | Hosting: self-host VPS (docker-compose) as v1 default; provider-agnostic (4 vCPU / 8 GB, Hetzner suggested); managed services as the documented migration path | Accepted |
+| D12 | Public exposure & cost governance: Cloudflare free edge, auth-gated ingestion, rate limits, 100 docs/day global cap + per-key quotas, storage lifecycle + signed URLs, budget kill-switch, secrets hygiene | Accepted |
 
-> Hosting (former open question #1) remains **undecided** — see §11.1 pros/cons; decision deferred to the Spec phase.
+> Remaining open questions (§11.3): Manual review, License, On-device OCR (WASM).
 
 ---
 
 ## 13. Recommended Next Steps
 
-1. **Decide the Hosting posture** (hybrid-managed vs self-host, §11.1) before the Spec phase.
-2. Draft the **family constitution** (promote document-processor v1.1 + merge ICES principles).
-3. Draft the **unified OpenAPI 3.1 contract** (document-processor endpoints + ICES invoice fields).
-4. Stand up the three component repos with the shared `.opencode/` agent/command set.
-5. Write the **product spec** (Gherkin) spanning capture → process → review across all three surfaces.
-6. Establish the **contract-change CI gate** before any app code depends on the contract.
+1. Draft the **family constitution** (promote document-processor v1.1 + merge ICES principles).
+2. Draft the **unified OpenAPI 3.1 contract** (document-processor endpoints + ICES invoice fields).
+3. Stand up the three component repos with the shared `.opencode/` agent/command set.
+4. Write the **product spec** (Gherkin) spanning capture → process → review across all three surfaces.
+5. Establish the **contract-change CI gate** before any app code depends on the contract.
 
 ---
 
-**Status:** Draft v0.2 — decision log accepted (D1–D10); Hosting pending (§11.1).
+**Status:** Draft v0.3 — decision log accepted (D1–D12); Hosting + cost governance resolved.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
