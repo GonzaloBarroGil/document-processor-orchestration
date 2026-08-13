@@ -6,8 +6,10 @@ service** (Python/FastAPI), a **web app** (React + Vite SPA), and a **mobile app
 
 ## Documents
 
+- [`docs/constitution.md`](docs/constitution.md) — family-wide constitution (SDD rules,
+  architecture/design principles, quality gates, git governance).
 - [`docs/feasibility.md`](docs/feasibility.md) — feasibility analysis: stack, topology,
-  testing strategy, SDD environment, and the decision log (D1–D10).
+  testing strategy, SDD environment, and the decision log (D1–D12).
 - [`docs/conversations/`](docs/conversations/) — working-session transcripts
   (conversation-persistence gate, decision D10).
 

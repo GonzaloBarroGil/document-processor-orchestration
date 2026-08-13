@@ -479,7 +479,7 @@ so a public API cannot burn budget. OCR/upload is auth-gated; cost is bounded by
 
 ## 13. Recommended Next Steps
 
-1. Draft the **family constitution** (promote document-processor v1.1 + merge ICES principles).
+1. ~~Draft the **family constitution**~~ → done: `docs/constitution.md` v1.0 (approved).
 2. Draft the **unified OpenAPI 3.1 contract** (document-processor endpoints + ICES invoice fields).
 3. Stand up the three component repos with the shared `.opencode/` agent/command set.
 4. Write the **product spec** (Gherkin) spanning capture → process → review across all three surfaces.
