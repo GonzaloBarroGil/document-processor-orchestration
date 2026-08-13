@@ -8,6 +8,8 @@ service** (Python/FastAPI), a **web app** (React + Vite SPA), and a **mobile app
 
 - [`docs/constitution.md`](docs/constitution.md) — family-wide constitution (SDD rules,
   architecture/design principles, quality gates, git governance).
+- [`docs/contracts/openapi.yaml`](docs/contracts/openapi.yaml) — unified OpenAPI 3.1
+  contract (single source of truth for web service, web app, and mobile app).
 - [`docs/feasibility.md`](docs/feasibility.md) — feasibility analysis: stack, topology,
   testing strategy, SDD environment, and the decision log (D1–D12).
 - [`docs/conversations/`](docs/conversations/) — working-session transcripts
