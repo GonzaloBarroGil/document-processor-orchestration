@@ -482,7 +482,7 @@ so a public API cannot burn budget. OCR/upload is auth-gated; cost is bounded by
 1. ~~Draft the **family constitution**~~ → done: `docs/constitution.md` v1.0 (approved).
 2. ~~Draft the **unified OpenAPI 3.1 contract**~~ → done: `docs/contracts/openapi.yaml` (approved).
 3. Stand up the three component repos with the shared `.opencode/` agent/command set.
-4. Write the **product spec** (Gherkin) spanning capture → process → review across all three surfaces.
+4. ~~Write the **product spec** (Gherkin)~~ → done: `docs/spec/product.md` (approved).
 5. Establish the **contract-change CI gate** before any app code depends on the contract.
 
 ---
