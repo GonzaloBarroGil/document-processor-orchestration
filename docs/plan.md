@@ -232,7 +232,7 @@ document-processor-mobile/
 
 | ID | Task | Deps | Deliverable | Spec |
 |----|------|------|-------------|------|
-| X1.1 | Component `.opencode/` agent + command scaffolding (3 repos) | — | shared SDD toolset (§13 step 3) | — |
+| X1.1 | Component `.opencode/` agent + command scaffolding (2 repos: web + mobile) | — | shared SDD toolset (§13 step 3) | — |
 | X1.2 | Contract-change CI gate (regenerate clients → compile all consumers) | — | cross-repo CI workflow (§13 step 5) | — |
 | X1.3 | `docs/glossary.md` (ubiquitous language) | — | glossary doc (§13) | — |
 
@@ -266,9 +266,9 @@ W1.1 (auth API live) ─► A0.2 (client) ─► A0.3 ─► A1.1 ─► A2.x
 
 Maps to the two remaining §13 steps:
 
-1. **Component `.opencode/` scaffolding (X1.1)** — copy the shared agent/command set
-   (`constitution-drafter`, `spec-writer`, `task-planner`, `implementer`, `validator`, plus proposed
-   `contract-designer` / `e2e-engineer`) into each component repo so downstream SDD phases run there.
+1. **Component `.opencode/` scaffolding (X1.1)** — scaffold the two new component repos with a
+   TS-flavored `spec-writer` / `task-planner` / `implementer` / `validator` agent+command set (no
+   `constitution-drafter` — the Constitution is hub-owned); `document-processor` is left as-is.
 2. **Contract-change CI gate (X1.2)** — a PR touching `docs/contracts/openapi.yaml` here triggers
    client regeneration + compile in web, mobile, and (via `schemathesis`) the web service. A breaking
    change cannot merge until all consumers are green (feasibility §9.2).

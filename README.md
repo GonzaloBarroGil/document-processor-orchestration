@@ -12,6 +12,7 @@ service** (Python/FastAPI), a **web app** (React + Vite SPA), and a **mobile app
   contract (single source of truth for web service, web app, and mobile app).
 - [`docs/spec/product.md`](docs/spec/product.md) — product spec (cross-component Gherkin).
 - [`docs/plan.md`](docs/plan.md) — cross-component implementation plan (33 tasks, W/A/M/X streams).
+- [`docs/glossary.md`](docs/glossary.md) — domain ubiquitous language.
 - [`docs/adr/`](docs/adr/) — cross-cutting architecture decision records (001–005).
 - [`docs/feasibility.md`](docs/feasibility.md) — feasibility analysis: stack, topology,
   testing strategy, SDD environment, and the decision log (D1–D12).

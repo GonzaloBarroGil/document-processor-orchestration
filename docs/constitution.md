@@ -183,6 +183,9 @@ Constitution ──► Spec ──► Plan ──► Tasks ──► Implementat
 
 - Each phase may delegate to specialized subagents (see `docs/feasibility.md` §8.3 for the roster).
   Agents operate within the boundaries of the current phase. HITL gates block progression.
+- **Component repos enter at Spec:** the Constitution phase and its output are hub-owned. Component
+  repos (web service, web app, mobile app) conform to this constitution and run Spec → Plan → Tasks →
+  Implementation → Validation; there is no per-component `constitution-drafter`.
 - **Conversation persistence (D10):** no HITL gate may pass unless the working session has been
   persisted to `docs/conversations/conversation-N.md` (raw transcript + decisions table). The
   orchestrating agent writes it; the `validator` gate verifies it exists before passing.

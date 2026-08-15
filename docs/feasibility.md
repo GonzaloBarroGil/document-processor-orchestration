@@ -327,17 +327,27 @@ Agents operate strictly within their phase's boundaries.
 
 ### 8.3 Agents (carried over from document-processor `.opencode/agents/`)
 
-| Agent | Phase | Scope |
-|-------|-------|-------|
-| `constitution-drafter` | Constitution | proposes amendments as Change Artifacts for HITL |
-| `spec-writer` | Spec | Gherkin + contract drafts |
-| `task-planner` | Plan | decomposes spec into atomic tasks, ADRs |
-| `implementer` | Tasks/Implementation | code + tests, one task at a time |
-| `validator` | Validation | runs lint/typecheck/test/coverage, reports; also verifies the conversation-persistence gate (D10) |
+The family Constitution is hub-owned (§8.2); component repos enter the pipeline at **Spec** and
+conform to it. Roster per repo:
 
-Plus two new cross-component agents (proposed):
+| Agent | Phase | Where | Scope |
+|-------|-------|-------|-------|
+| `constitution-drafter` | Constitution | **hub only** (historical in `document-processor`) | proposes amendments as Change Artifacts for HITL |
+| `spec-writer` | Spec | all component repos | feature specs + acceptance scenarios |
+| `task-planner` | Plan | all component repos | decomposes spec into atomic tasks, ADRs |
+| `implementer` | Tasks/Implementation | all component repos | code + tests, one task at a time |
+| `validator` | Validation | all component repos | runs lint/typecheck/test/coverage, reports; also verifies the conversation-persistence gate (D10) |
+
+The web + mobile repos carry a TS-flavored subset (`spec-writer`, `task-planner`, `implementer`,
+`validator` — `tsc`/ESLint/Vitest/pnpm) and no `constitution-drafter`.
+
+Plus two new cross-component agents (proposed, not yet added):
 - `contract-designer` — owns the OpenAPI contract and generated-client build.
 - `e2e-engineer` — owns Playwright/Maestro automation suites.
+
+**Note:** `document-processor`'s `constitution-drafter` is a historical leftover from its
+standalone pre-orchestration days; as the backend evolves under this orchestration model it may be
+retired/refactored.
 
 ### 8.4 Git governance (unchanged non-negotiable)
 
@@ -481,9 +491,9 @@ so a public API cannot burn budget. OCR/upload is auth-gated; cost is bounded by
 
 1. ~~Draft the **family constitution**~~ → done: `docs/constitution.md` v1.0 (approved).
 2. ~~Draft the **unified OpenAPI 3.1 contract**~~ → done: `docs/contracts/openapi.yaml` (approved).
-3. Stand up the three component repos with the shared `.opencode/` agent/command set.
+3. ~~Stand up the three component repos with the shared `.opencode/` agent/command set~~ → scaffolded: `document-processor-web` + `document-processor-mobile` (TS-flavored); `document-processor` retains its Python set.
 4. ~~Write the **product spec** (Gherkin)~~ → done: `docs/spec/product.md` (approved).
-5. Establish the **contract-change CI gate** before any app code depends on the contract.
+5. ~~Establish the **contract-change CI gate** before any app code depends on the contract~~ → scaffolded: dormant workflows in hub + 3 component repos (activate on push).
 
 ---
 

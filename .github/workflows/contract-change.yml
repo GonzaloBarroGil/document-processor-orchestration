@@ -1,0 +1,33 @@
+name: contract-change
+
+on:
+  pull_request:
+    paths:
+      - "docs/contracts/**"
+
+jobs:
+  dispatch:
+    name: Dispatch contract change to consumers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch to web app
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: token ${{ secrets.CROSS_REPO_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/GonzaloBarroGil/document-processor-web/dispatches \
+            -d '{"event_type":"contract-change","client_payload":{"ref":"${{ github.event.pull_request.head.sha }}"}}'
+      - name: Dispatch to mobile app
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: token ${{ secrets.CROSS_REPO_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/GonzaloBarroGil/document-processor-mobile/dispatches \
+            -d '{"event_type":"contract-change","client_payload":{"ref":"${{ github.event.pull_request.head.sha }}"}}'
+      - name: Dispatch to web service
+        run: |
+          curl -fsSL -X POST \
+            -H "Authorization: token ${{ secrets.CROSS_REPO_PAT }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/GonzaloBarroGil/document-processor/dispatches \
+            -d '{"event_type":"contract-change","client_payload":{"ref":"${{ github.event.pull_request.head.sha }}"}}'
