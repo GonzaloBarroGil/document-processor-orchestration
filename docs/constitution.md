@@ -1,12 +1,14 @@
-# Constitution v1.0 — Document Processor Orchestration
+# Constitution v1.1 — Document Processor Orchestration
 
 ## Family-Wide Constitution
 
-> **Status:** Approved v1.0
-> **Date:** 2026-08-13
+> **Status:** Approved v1.1
+> **Date:** 2026-08-17
 > **Scope:** the document/invoice processing product family — web service, web app, mobile app
 > **Provenance:** promotes `document-processor/docs/constitution.md` v1.1 to family-wide scope
 > and merges the compatible principles from `ICES` (see `docs/feasibility.md` §2.2 for the merge map).
+> v1.1 folds in the backend-only quality points (ruff ruleset, `ruff format`, mypy untyped-lib
+> exemption) on removal of the component-level constitution (see `docs/conversations/conversation-8.md`).
 
 ---
 
@@ -149,7 +151,7 @@ makes this posture safe to change.
 | Integration | FastAPI `TestClient` + testcontainers | MSW against generated types | Capacitor plugin mocks; offline-queue state machine |
 | E2E | Worker E2E (queue → OCR → persist); `schemathesis` | Playwright (login → list → review → export) | Maestro/Detox on emulators |
 | Contract | `schemathesis` + OpenAPI validation in CI | Type-safe client compile | Same generated client |
-| Static | ruff + mypy strict | ESLint + `tsc --noEmit` | ESLint + `tsc --noEmit` |
+| Static | ruff (`E, F, I, N, W, UP, B, SIM, C4, D`) + `ruff format` + mypy strict | ESLint + `tsc --noEmit` | ESLint + `tsc --noEmit` |
 
 ### 7.2 Gates
 
@@ -157,8 +159,14 @@ makes this posture safe to change.
   component's `tests/bdd/`.
 - **TDD:** unit tests written before implementation for domain logic (Red → Green → Refactor).
 - **CI gate:** lint → typecheck → test → build must pass before any merge (per component).
+- **No warnings allowed:** lint and typecheck must be clean (zero warnings) in CI.
 - **Coverage:** domain ≥90%, adapters ≥70% (backend); ≥80% (web/mobile) — enforced in CI.
 - **No "run locally only" tests:** every E2E suite must run in CI.
+- **Third-party untyped libraries (backend):** an open-source library lacking type stubs may be used
+  when it is the best open-source option for a critical function. Each exemption must be documented
+  with (a) why no typed alternative exists, (b) evidence of the missing stubs, and (c) a runtime
+  compensating control (Pydantic boundary parsing). Current exemptions: `paddleocr`, `easyocr`,
+  `pillow-heif` — see `document-processor/docs/adr/011-ocr-typing-tradeoff.md`.
 
 ---
 
@@ -264,4 +272,4 @@ drivable into unbounded cost. Enforced guardrails:
 
 ---
 
-**Status:** Approved v1.0.
+**Status:** Approved v1.1.

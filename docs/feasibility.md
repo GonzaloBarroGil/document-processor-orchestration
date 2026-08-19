@@ -332,7 +332,7 @@ conform to it. Roster per repo:
 
 | Agent | Phase | Where | Scope |
 |-------|-------|-------|-------|
-| `constitution-drafter` | Constitution | **hub only** (historical in `document-processor`) | proposes amendments as Change Artifacts for HITL |
+| `constitution-drafter` | Constitution | **hub only** | proposes amendments as Change Artifacts for HITL |
 | `spec-writer` | Spec | all component repos | feature specs + acceptance scenarios |
 | `task-planner` | Plan | all component repos | decomposes spec into atomic tasks, ADRs |
 | `implementer` | Tasks/Implementation | all component repos | code + tests, one task at a time |
@@ -345,9 +345,10 @@ Plus two new cross-component agents (proposed, not yet added):
 - `contract-designer` — owns the OpenAPI contract and generated-client build.
 - `e2e-engineer` — owns Playwright/Maestro automation suites.
 
-**Note:** `document-processor`'s `constitution-drafter` is a historical leftover from its
-standalone pre-orchestration days; as the backend evolves under this orchestration model it may be
-retired/refactored.
+**Note:** `document-processor`'s component-level constitution and `constitution-drafter` were
+retired after the family constitution absorbed the backend-only quality points (v1.1); its
+`.opencode/` agents/commands now reference the hub constitution directly (see
+`docs/conversations/conversation-8.md`).
 
 ### 8.4 Git governance (unchanged non-negotiable)
 
