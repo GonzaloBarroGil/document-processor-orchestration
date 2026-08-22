@@ -35,6 +35,8 @@ tags:
     description: Human-in-the-loop review queue + manual fix/export
   - name: api-keys
     description: Machine-client API key administration (ADMIN)
+  - name: dashboard
+    description: Processing summary (counts by status + recent activity)
 
 security: []
 
@@ -388,6 +390,22 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/dashboard:
+    get:
+      tags: [dashboard]
+      summary: Processing summary for the dashboard
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
 components:
   securitySchemes:
     apiKeyAuth:
@@ -729,3 +747,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiKeyView"
+
+    DashboardSummary:
+      type: object
+      required: [counts, recent]
+      properties:
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
