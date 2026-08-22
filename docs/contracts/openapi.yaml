@@ -33,6 +33,8 @@ tags:
     description: Ingestion, status, listing, image retrieval
   - name: review
     description: Human-in-the-loop review queue + manual fix/export
+  - name: api-keys
+    description: Machine-client API key administration (ADMIN)
 
 security: []
 
@@ -328,6 +330,63 @@ paths:
                 $ref: "#/components/schemas/DocumentList"
         "403":
           $ref: "#/components/responses/Forbidden"
+
+  /api/v1/api-keys:
+    get:
+      tags: [api-keys]
+      summary: List machine-client API keys
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of API keys
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyList"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [api-keys]
+      summary: Create a machine-client API key
+      description: The raw key is returned once and stored only as a SHA-256 hash.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiKeyCreateRequest"
+      responses:
+        "201":
+          description: Created API key (raw key shown once)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreateResponse"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/api-keys/{prefix}/revoke:
+    post:
+      tags: [api-keys]
+      summary: Revoke a machine-client API key
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: prefix
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Revoked
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
 components:
   securitySchemes:
@@ -630,3 +689,43 @@ components:
           $ref: "#/components/schemas/ParsedData"
         validation_result:
           $ref: "#/components/schemas/ValidationResult"
+
+    ApiKeyCreateRequest:
+      type: object
+      properties:
+        label:
+          type: [string, "null"]
+
+    ApiKeyCreateResponse:
+      type: object
+      required: [key, prefix]
+      properties:
+        key:
+          type: string
+        prefix:
+          type: string
+        label:
+          type: [string, "null"]
+
+    ApiKeyView:
+      type: object
+      required: [prefix, created_at, revoked]
+      properties:
+        prefix:
+          type: string
+        label:
+          type: [string, "null"]
+        created_at:
+          type: string
+          format: date-time
+        revoked:
+          type: boolean
+
+    ApiKeyList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKeyView"
