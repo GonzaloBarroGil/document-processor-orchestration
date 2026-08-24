@@ -72,6 +72,10 @@ The dispatch requires a **`CROSS_REPO_PAT`** repository secret on the hub (see �
 (runtime contract fuzzing against a live server) is a **documented deferred enhancement** — it
 needs Postgres + MinIO + a worker + seeded auth and is not yet wired.
 
+Spectral uses a committed `.spectral.yaml` ruleset (`extends: spectral:oas`, with the metadata-only
+recommended rules `info-contact`/`operation-description`/`operation-operationId` disabled). It is
+present in both the hub and the web service so `spectral lint` auto-discovers it.
+
 ---
 
 ## 5. `CROSS_REPO_PAT` — setup (HITL-only step)
