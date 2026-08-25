@@ -77,6 +77,10 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /api/v1/auth/refresh:
     post:
@@ -98,6 +102,10 @@ paths:
                 $ref: "#/components/schemas/TokenPair"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /api/v1/auth/me:
     get:
@@ -168,6 +176,10 @@ paths:
           $ref: "#/components/responses/Unprocessable"
         "429":
           $ref: "#/components/responses/RateLimited"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
     get:
       tags: [documents]
@@ -208,6 +220,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/documents/{document_id}:
     get:
@@ -227,6 +245,12 @@ paths:
                 $ref: "#/components/schemas/Document"
         "404":
           $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/documents/{document_id}/image:
     get:
@@ -254,6 +278,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/documents/{document_id}/review:
     patch:
@@ -277,10 +307,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Document"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /api/v1/documents/{document_id}/export:
     get:
@@ -301,6 +337,12 @@ paths:
                 $ref: "#/components/schemas/DocumentExport"
         "404":
           $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/review/queue:
     get:
@@ -330,8 +372,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DocumentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
 
   /api/v1/api-keys:
     get:
@@ -346,6 +392,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiKeyList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
     post:
@@ -367,8 +415,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiKeyCreateResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "400":
+          $ref: "#/components/responses/BadRequest"
 
   /api/v1/api-keys/{prefix}/revoke:
     post:
@@ -385,6 +439,8 @@ paths:
       responses:
         "204":
           description: Revoked
+        "401":
+          $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
@@ -435,6 +491,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Malformed request body
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     Forbidden:
       description: Insufficient role
       content:
@@ -459,6 +521,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
+    ValidationError:
+      description: Request validation failed (FastAPI/Pydantic)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorDetail"
     RateLimited:
       description: Rate limit or daily quota exceeded
       headers:
@@ -507,6 +575,26 @@ components:
       properties:
         detail:
           type: string
+
+    ValidationErrorDetail:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            required: [loc, msg, type]
+            properties:
+              loc:
+                type: array
+                items:
+                  type: [string, integer]
+              msg:
+                type: string
+              type:
+                type: string
+              input: {}
 
     IngestResponse:
       type: object
