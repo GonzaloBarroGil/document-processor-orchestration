@@ -692,11 +692,27 @@ components:
           format: uuid
           description: Owner (human user) — nullable for machine-client submissions (D9).
         parsed_data:
-          $ref: "#/components/schemas/ParsedData"
+          anyOf:
+            - $ref: "#/components/schemas/ParsedData"
+            - type: "null"
         validation_result:
-          $ref: "#/components/schemas/ValidationResult"
+          anyOf:
+            - $ref: "#/components/schemas/ValidationResult"
+            - type: "null"
         error_detail:
           type: [string, "null"]
+        reviewed:
+          type: boolean
+        reviewed_by:
+          type: [string, "null"]
+          format: uuid
+        reviewed_at:
+          type: [string, "null"]
+          format: date-time
+        edited_fields:
+          type: [object, "null"]
+          additionalProperties:
+            type: string
         created_at:
           type: string
           format: date-time
@@ -792,9 +808,13 @@ components:
         status:
           $ref: "#/components/schemas/DocumentStatus"
         parsed_data:
-          $ref: "#/components/schemas/ParsedData"
+          anyOf:
+            - $ref: "#/components/schemas/ParsedData"
+            - type: "null"
         validation_result:
-          $ref: "#/components/schemas/ValidationResult"
+          anyOf:
+            - $ref: "#/components/schemas/ValidationResult"
+            - type: "null"
 
     ApiKeyCreateRequest:
       type: object
