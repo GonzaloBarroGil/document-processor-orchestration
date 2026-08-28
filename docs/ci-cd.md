@@ -34,6 +34,10 @@ All workflows trigger on `push` (to `main`) and `pull_request`.
 | `document-processor-mobile` (M) | `pnpm install --frozen-lockfile` → `lint` → `typecheck` → `test -- --run --coverage` → `build` | ≥80% (configured in `vite.config.ts`) |
 | `document-processor-orchestration` (X) | Python YAML parse of `docs/contracts/openapi.yaml` → `spectral` lint | — |
 
+**Toolchain pinning (web + mobile):** pnpm is pinned via the `packageManager` field in each app's
+`package.json` (`pnpm@11.22.0`), which `pnpm/action-setup@v4` reads automatically — no `version` input
+is needed. Both apps run CI on **Node 22** (`actions/setup-node@v4` `node-version: 22`).
+
 ### E2E (on every push)
 
 - **Web app** — Playwright (`e2e/app.spec.ts`), self-contained via `page.route` API mocks.
@@ -88,8 +92,9 @@ stored in any file.
    - **Resource owner:** your account.
    - **Repository access:** "Only select repositories" → `document-processor`,
      `document-processor-web`, `document-processor-mobile` (the three *consumers* the hub dispatches to).
-   - **Permissions → Repository permissions → Administration: Read and write** (required to trigger
-     `repository_dispatch`). Metadata is auto-selected.
+   - **Permissions → Repository permissions → Contents: Read and write** (required to trigger
+     `repository_dispatch`). Metadata is auto-selected. (`Administration` is *not* required — a
+     fine-grained token with only `Administration` returns `403` on the dispatch.)
    - (Alternative: a **classic** token with the `repo` scope.)
 2. **Store it**: hub repo (`document-processor-orchestration`) → **Settings → Secrets and variables →
    Actions → New repository secret**, name **`CROSS_REPO_PAT`**, paste the token.
