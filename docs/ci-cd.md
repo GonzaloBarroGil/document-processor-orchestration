@@ -36,14 +36,17 @@ All workflows trigger on `push` (to `main`) and `pull_request`.
 
 **Toolchain pinning (web + mobile):** pnpm is pinned via the `packageManager` field in each app's
 `package.json` (`pnpm@11.22.0`), which `pnpm/action-setup@v4` reads automatically — no `version` input
-is needed. Both apps run CI on **Node 22** (`actions/setup-node@v4` `node-version: 22`).
+is needed. Both apps run CI on **Node 22** (`actions/setup-node@v4` `node-version: 22`). The mobile
+Android APK build job runs on **JDK 21** (`actions/setup-java@v4` `java-version: 21`) — Capacitor 7
+requires JDK 21.
 
 ### E2E (on every push)
 
 - **Web app** — Playwright (`e2e/app.spec.ts`), self-contained via `page.route` API mocks.
   Browser installed with `pnpm exec playwright install --with-deps chromium`.
-- **Mobile app** — Maestro (`e2e/maestro/*.yaml`) on an Android emulator; workflow builds the
-  web bundle → `cap add/sync android` → `gradle assembleDebug` → `maestro test`.
+- **Mobile app** — Playwright (`e2e/app.spec.ts`) against the Capacitor web bundle, with a mocked
+  camera (`VITE_MOCK_CAPTURE=1`) and `page.route` API mocks. A separate optional job builds the
+  Android debug APK (`cap add/sync android` → `gradle assembleDebug`, JDK 21).
 
 ---
 
