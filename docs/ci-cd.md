@@ -36,7 +36,9 @@ All workflows trigger on `push` (to `main`) and `pull_request`.
 
 **Toolchain pinning (web + mobile):** pnpm is pinned via the `packageManager` field in each app's
 `package.json` (`pnpm@11.22.0`), which `pnpm/action-setup@v4` reads automatically — no `version` input
-is needed. Both apps run CI on **Node 22** (`actions/setup-node@v4` `node-version: 22`).
+is needed. Both apps run CI on **Node 22** (`actions/setup-node@v4` `node-version: 22`). The mobile
+Maestro E2E job also runs on **JDK 21** (`actions/setup-java@v4` `java-version: 21`) — Capacitor 7
+requires JDK 21.
 
 ### E2E (on every push)
 
