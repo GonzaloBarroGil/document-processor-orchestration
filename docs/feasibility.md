@@ -379,19 +379,28 @@ This is decision **D10** (§12).
 
 ## 9. CI/CD
 
+> **Implemented** (2026-08-23) — supersedes the original aspirational §9. The operational
+> branching model, CI matrix, coverage gates, and contract-gate setup are documented in
+> `docs/ci-cd.md`. Summary of the implemented state:
+
 ### 9.1 Per-component CI (each repo)
 
-- **Web service:** `lint → typecheck (mypy strict) → unit → integration (testcontainers) → worker E2E → build`.
-  Mirror of the existing `Makefile` `all` target.
-- **Web app:** `tsc → eslint → vitest (coverage) → Playwright E2E → build`.
-- **Mobile app:** `tsc → eslint → vitest (coverage) → Maestro/Detox on emulator → build`.
+- **Web service:** `ruff check` → `ruff format --check` → `mypy strict` → `pytest tests/unit tests/bdd`
+  → `pytest tests/integration` (testcontainers). Coverage: domain ≥90% + adapters ≥70% (measure once,
+  two filtered `coverage report --fail-under` passes).
+- **Web app:** `eslint` → `tsc --noEmit` → `vitest` → `build`, plus a Playwright E2E job on every push.
+- **Mobile app:** `eslint` → `tsc --noEmit` → `vitest --coverage` (≥80% gate) → `build`, plus a
+  Maestro E2E job on every push.
+
+All workflows trigger on `push` (to `main`) and `pull_request` (GitHub Flow — see `docs/ci-cd.md` §1).
 
 ### 9.2 Orchestration-repo CI (this repo)
 
-- Markdown lint (documents), `spectral` lint on OpenAPI, link checker, glossary consistency.
-- **Contract-change workflow:** PR touching `contracts/` triggers downstream CI on the web-service,
-  web, and mobile repos against the new spec (regenerate client, compile, run contract tests). A
-  breaking contract change cannot merge until all consumers are green — enforcing API-stability by construction.
+- Light gate: `docs/contracts/openapi.yaml` YAML parse + `spectral` lint.
+- **Contract-change workflow:** a PR touching `docs/contracts/**` dispatches `contract-change` to the
+  web-service, web, and mobile repos. Consumers regenerate/compile (TS clients) or run the static
+  contract comparison (`scripts/check_contract.py`) on the web service. Requires the `CROSS_REPO_PAT`
+  hub secret (HITL). Runtime fuzzing via schemathesis is deferred.
 
 ---
 
