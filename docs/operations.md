@@ -151,6 +151,7 @@ loaded from `.env`). The important ones:
 | `RATE_LIMIT_PER_MINUTE` | 60 | per-key ingest limit |
 | `DAILY_DOCUMENT_CAP` | 100 | global daily ingestion cap |
 | `MAX_IMAGE_SIZE_BYTES` | 10 MiB | max upload size |
+| `STORAGE_QUOTA_BYTES` | 10737418240 (10 GiB) | quota denominator for `usage_pct()` |
 | `STORAGE_HIGH_WATERMARK_PCT` / `STORAGE_CRITICAL_PCT` | 85 / 95 | expiry triggers |
 | `STORAGE_EXPIRE_COMPLETED_DAYS` / `STORAGE_EXPIRE_CRITICAL_DAYS` | 90 / 30 | retention windows |
 | `CORS_ALLOW_ORIGINS` | `["http://localhost:5173", ...]` | JSON array of allowed origins |
@@ -180,19 +181,13 @@ Single VPS (4 vCPU / 8 GB suggested; provider-agnostic — Hetzner CX42 was the 
 
 ### 4.3 Reverse proxy — Caddy
 
-Serve the SPA as static files and proxy the API. `Caddyfile` (template to create on the host):
+The Caddyfile lives at `document-processor/deploy/Caddyfile` (committed, placeholder domains
+`app.example.com` / `api.example.com`). It serves the SPA as static files and proxies the API to the
+`app` service on the compose network, terminating TLS via Let's Encrypt:
 
-```caddyfile
-app.example.com {
-    encode gzip
-    root * /srv/web
-    try_files {path} /index.html
-    file_server
-}
-
-api.example.com {
-    reverse_proxy 127.0.0.1:8000
-}
+```bash
+cd document-processor
+# edit deploy/Caddyfile to use your real hostnames
 ```
 
 Build the web app (`pnpm build`) and copy `dist/` to `/srv/web` (or add a build stage to the compose
@@ -201,60 +196,24 @@ family; keep it if the SPA calls `api.example.com` cross-origin.
 
 ### 4.4 Services — production compose
 
-The repo's `docker-compose.yml` is **dev-oriented** (source mounts, default creds, exposed DB/console
-ports). For production, adapt it (template):
+The production compose file is committed at `document-processor/deploy/docker-compose.prod.yml`
+(template), alongside `deploy/.env.production.example`. The repo's root `docker-compose.yml` remains
+**dev-oriented** (source mounts, default creds, exposed DB/console ports).
 
-```yaml
-services:
-  app:
-    build: .
-    restart: unless-stopped
-    command: uvicorn document_processor.adapters.web.server:app --host 0.0.0.0 --port 8000
-    env_file: .env.production
-    depends_on:
-      postgres: { condition: service_healthy }
-      minio:   { condition: service_healthy }
-    # no source mount, no published ports (Caddy reaches it on the compose network)
-
-  worker:
-    build: .
-    restart: unless-stopped
-    command: docproc-worker
-    env_file: .env.production
-    depends_on:
-      postgres: { condition: service_healthy }
-      minio:   { condition: service_healthy }
-
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment: { POSTGRES_DB: docproc, POSTGRES_USER: docproc, POSTGRES_PASSWORD: <secret> }
-    volumes: [pgdata:/var/lib/postgresql/data]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U docproc"]
-      interval: 3s
-
-  minio:
-    image: minio/minio:latest
-    restart: unless-stopped
-    command: server /data --console-address :9001
-    environment: { MINIO_ROOT_USER: <secret>, MINIO_ROOT_PASSWORD: <secret> }
-    volumes: [miniodata:/data]
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 3s
-
-volumes:
-  pgdata:
-  miniodata:
+```bash
+cd document-processor
+cp deploy/.env.production.example deploy/.env.production   # fill in real secrets
+docker compose -f deploy/docker-compose.prod.yml up -d
 ```
 
-Keep the DB/console ports **unpublished** in prod (no `ports:` section) — they're only needed
-on the compose network.
+Differences from dev: no source mounts, `restart: unless-stopped`, credentials from
+`.env.production`, and no published DB/console/API ports — Caddy (a `caddy` service in the same
+compose network) reaches `app` on `app:8000`. Only Caddy publishes `80`/`443`.
 
 ### 4.5 Secrets & config
 
-- `.env` (or `.env.production`) is **gitignored**; `.env.example` is the committed template.
+- `deploy/.env.production` is **gitignored**; `deploy/.env.production.example` is the committed template
+  (`docker-compose.prod.yml` reads it via `env_file: .env.production` relative to the `deploy/` dir).
 - Generate a real JWT secret: `python -c "import secrets; print(secrets.token_urlsafe(64))"`.
 - Use distinct, strong credentials for PostgreSQL and MinIO.
 - Never commit secrets; pass them via the env file (outside the repo) or the host's secret store.
@@ -264,7 +223,9 @@ on the compose network.
 The schema is **not** auto-applied — run Alembic as a deploy step:
 
 ```bash
-docker compose run --rm app alembic -c src/document_processor/adapters/persistence/postgresql/alembic.ini upgrade head
+cd document-processor
+docker compose -f deploy/docker-compose.prod.yml run --rm app \
+  alembic -c src/document_processor/adapters/persistence/postgresql/alembic.ini upgrade head
 ```
 
 Then seed the initial admin and any API keys (§3.5). Deploys become: pull → build → migrate →
@@ -284,7 +245,7 @@ Then seed the initial admin and any API keys (§3.5). Deploys become: pull → b
 Run the lifecycle sweep on a schedule (system cron or a container):
 
 ```bash
-0 3 * * * cd /srv/document-processor && docker compose run --rm app docproc-lifecycle
+0 3 * * * cd /srv/document-processor && docker compose -f deploy/docker-compose.prod.yml run --rm app docproc-lifecycle
 ```
 
 ### 4.8 Scaling ladder
@@ -374,9 +335,6 @@ watermarks:
 
 Expired images are deleted from MinIO and marked `IMAGE_EXPIRED` in the DB (subsequent
 `GET /documents/{id}/image` returns `410`).
-
-> **Known limitation:** `MinioStorage.usage_pct()` computes usage against a hard-coded 10 GiB quota,
-> not a configurable value. Tune the watermark thresholds to taste until it's parameterized.
 
 ### 6.3 Watermark alerts
 
