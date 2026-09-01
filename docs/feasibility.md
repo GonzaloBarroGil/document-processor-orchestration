@@ -423,6 +423,9 @@ All workflows trigger on `push` (to `main`) and `pull_request` (GitHub Flow — 
 
 ### 11.1 Hosting — resolved (D11)
 
+> The operational runbook (concrete commands for running locally, deploying, and managing DB/storage)
+> lives in `docs/operations.md`.
+
 **Decision: self-host VPS (docker-compose) as the v1 default**, with managed services
 documented as the scale/migration path. Rationale: minimize cost (flat VPS beats
 usage-based managed at 100–1000 docs/day), no Argentine data-residency block, and

@@ -16,6 +16,9 @@ service** (Python/FastAPI), a **web app** (React + Vite SPA), and a **mobile app
 - [`docs/adr/`](docs/adr/) — cross-cutting architecture decision records (001–005).
 - [`docs/feasibility.md`](docs/feasibility.md) — feasibility analysis: stack, topology,
   testing strategy, SDD environment, and the decision log (D1–D12).
+- [`docs/ci-cd.md`](docs/ci-cd.md) — branching model, per-repo CI matrix, and the contract gate.
+- [`docs/operations.md`](docs/operations.md) — run locally, production deployment, and database +
+  storage management.
 - [`docs/conversations/`](docs/conversations/) — working-session transcripts
   (conversation-persistence gate, decision D10).
 
